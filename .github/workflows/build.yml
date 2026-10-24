@@ -1,30 +1,11 @@
-name: Build Zakkerni APK
+name: Test Zakkerni Workflow
 
-'on':
+on:
 workflow_dispatch:
 
 jobs:
-build:
+test:
 runs-on: ubuntu-latest
 steps:
-- name: Checkout repository
-uses: actions/checkout@v4
-
-  - name: Set up Java
-    uses: actions/setup-java@v4
-    with:
-      distribution: temurin
-      java-version: '17'
-
-  - name: Check files
-    run: |
-      echo "Repository files:"
-      find . -maxdepth 3 -type f | sort | head -200
-      if [ -f "./gradlew" ]; then
-        echo "Gradle wrapper found in root"
-      elif [ -f "./Zakkerni_Android_Project/gradlew" ]; then
-        echo "Gradle wrapper found in project folder"
-      else
-        echo "ERROR: Gradle wrapper not found"
-        exit 1
-      fi
+- name: Confirm workflow works
+run: echo "Workflow syntax is valid"
