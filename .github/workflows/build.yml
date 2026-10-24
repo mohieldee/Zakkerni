@@ -1,0 +1,21 @@
+
+name: Build Zakkerni APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/build.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract project ZIP
+        run: |
+          unzip -q Zakkerni_Android_Project.zip -d project
+          ls -la project
+          
