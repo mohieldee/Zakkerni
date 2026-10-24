@@ -10,6 +10,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -20,29 +21,68 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Extract project
+      - name: Inspect and extract ZIP
         run: |
-          mkdir project
-          unzip -q Zakkerni_Android_Project.zip -d project
-          find project -maxdepth 4 -type f | head -100
+          set -e
+          echo "=== ZIP CONTENTS ==="
+          unzip -Z1 Zakkerni_Android_Project.zip | head -200
 
-      - name: Locate Gradle wrapper
-        run: |
-          find project -type f -name gradlew -print
+          mkdir -p project
+          unzip -oq Zakkerni_Android_Project.zip -d project
 
-      - name: Build APK
+          echo "=== BUILD FILES ==="
+          find project -type f \( \
+            -name gradlew -o \
+            -name settings.gradle -o \
+            -name settings.gradle.kts -o \
+            -name build.gradle -o \
+            -name build.gradle.kts \
+          \) -print
+
+      - name: Locate Android project
+        id: locate
+        shell: bash
         run: |
-          WRAPPER=$(find project -type f -name gradlew | head -1)
-          if [ -z "$WRAPPER" ]; then
-            echo "ERROR: Gradle wrapper not found"
+          set -e
+
+          WRAPPER=$(find project -type f -name gradlew -print -quit)
+
+          if [ -n "$WRAPPER" ]; then
+            DIR=$(dirname "$WRAPPER")
+          else
+            DIR=$(find project -type f \
+              \( -name settings.gradle -o -name settings.gradle.kts \) \
+              -print -quit | xargs -r dirname)
+          fi
+
+          if [ -z "$DIR" ] || [ ! -d "$DIR" ]; then
+            echo "ERROR: Android project root not found."
+            echo "Inspect the ZIP CONTENTS above."
             exit 1
           fi
-          DIR=$(dirname "$WRAPPER")
-          cd "$DIR"
-          chmod +x gradlew
-          ./gradlew assembleDebug
+
+          echo "Project root: $DIR"
+          echo "dir=$DIR" >> "$GITHUB_OUTPUT"
+
+      - name: Build APK
+        working-directory: .
+        env:
+          PROJECT_DIR: ${{ steps.locate.outputs.dir }}
+        run: |
+          set -e
+          cd "$PROJECT_DIR"
+
+          if [ -f gradlew ]; then
+            chmod +x gradlew
+            ./gradlew assembleDebug
+          else
+            echo "ERROR: Gradle wrapper is missing."
+            echo "A complete Android project with a Gradle build is required."
+            exit 1
+          fi
 
       - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: Zakkerni-APK
